@@ -1,0 +1,747 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>Cementerio - Visualizador de Parcelas</title>
+<style>
+  :root{
+    --sidebar-width: 280px;
+    --bg-color: #111;
+    --panel-bg: #0f1720;
+    --panel-text: #e6eef6;
+    
+    /* CONFIGURACIÓN DE CELDAS - Ajusta aquí los tamaños */
+    --nicho-width: 300px;
+    --nicho-height: 300px;
+    --nicho-gap: 0;
+    --nicho-bg-image: url('imagenes/nicho.png');
+    
+    --fosa-width: 200px;
+    --fosa-height: 80px;
+    --fosa-gap: 8px;
+    --fosa-bg-image: none;
+    
+    --panteon-width: 150px;
+    --panteon-height: 150px;
+    --panteon-gap: 10px;
+    --panteon-bg-image: none;
+  }
+  html,body{
+    height:100%;
+    margin:0;
+    font-family: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial;
+    background:var(--bg-color);
+    color:var(--panel-text);
+  }
+  .app {
+    display:flex;
+    height:100vh;
+    width:100vw;
+    overflow:hidden;
+  }
+
+  /* SIDEBAR */
+  .sidebar {
+    width:var(--sidebar-width);
+    background:linear-gradient(180deg, #0b1220 0%, #07101a 100%);
+    padding:20px;
+    box-sizing:border-box;
+    border-right:1px solid rgba(255,255,255,0.05);
+    display:flex;
+    flex-direction:column;
+    gap:16px;
+    overflow-y:auto;
+  }
+  .sidebar h2 { 
+    margin:0 0 8px; 
+    font-size:20px;
+    color:#fff;
+    border-bottom:2px solid rgba(255,255,255,0.1);
+    padding-bottom:8px;
+  }
+  .info-section {
+    background:rgba(255,255,255,0.02);
+    padding:12px;
+    border-radius:8px;
+    border:1px solid rgba(255,255,255,0.05);
+  }
+  .info-row { 
+    font-size:14px; 
+    color: #bcd3e8; 
+    margin-bottom:8px;
+    display:flex;
+    flex-direction:column;
+    gap:4px;
+  }
+  .info-label {
+    font-size:11px;
+    text-transform:uppercase;
+    opacity:0.6;
+    letter-spacing:0.5px;
+  }
+  .info-value { 
+    font-weight:600; 
+    color:#fff;
+    font-size:15px;
+  }
+
+  /* CONTROLES */
+  button {
+    background:#0b2233;
+    border:1px solid rgba(255,255,255,0.1);
+    color:var(--panel-text);
+    padding:10px 14px;
+    border-radius:6px;
+    cursor:pointer;
+    font-weight:600;
+    transition:all 0.2s;
+  }
+  button:hover {
+    background:#0f3044;
+    border-color:rgba(255,255,255,0.2);
+  }
+
+  /* WORLD */
+  .world {
+    flex:1;
+    position:relative;
+    overflow:hidden;
+    background: #6a6a6a;
+  }
+
+  /* Contenedor arrastrable */
+  .world-inner {
+    position:absolute;
+    left:0;
+    top:0;
+    width:100%;
+    height:100%;
+    transform-origin: 0 0;
+    cursor:grab;
+  }
+  .world-inner.dragging {
+    cursor:grabbing;
+  }
+
+  /* Fondo dinámico según tipo */
+  .bg-layer {
+    position:absolute;
+    left:0; top:0;
+    width:100%;
+    height:100%;
+    overflow:hidden;
+    pointer-events:none;
+    opacity: 1;
+    background-repeat: repeat;
+    background-size: 400px 400px;
+    background-position: center;
+  }
+  .bg-layer img {
+    width:100%;
+    height:100%;
+    object-fit:cover;
+    filter: blur(2px);
+  }
+
+  /* Grid */
+  .grid {
+    position:absolute;
+    left:50%;
+    top:50%;
+    transform:translate(-50%, -50%);
+    display:flex;
+    flex-direction:column-reverse;
+    gap: 0px;
+  }
+
+  .fila-wrapper {
+    display:flex;
+    align-items:center;
+    gap:20px;
+  }
+
+  .fila-label {
+    font-size:24px;
+    font-weight:700;
+    color:#ffffff;
+    min-width:80px;
+    text-align:right;
+    text-transform:uppercase;
+    letter-spacing:1px;
+    user-select:none;
+  }
+
+  .fila-container {
+    display:flex;
+    align-items:center;
+    flex-wrap:nowrap;
+  }
+
+  .cell {
+    box-sizing:border-box;
+    border-radius:0px;
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    justify-content:center;
+    text-align:center;
+    font-size:13px;
+    cursor:pointer;
+    user-select:none;
+    transition: transform .15s ease, box-shadow .15s ease;
+    padding:10px;
+    overflow:hidden;
+    background: rgba(255,255,255,0.03);
+    /* border: 2px solid rgba(255,255,255,0.06); */
+    image-rendering: -webkit-optimize-contrast;
+    image-rendering: crisp-edges;
+    position:relative;
+    background-size:cover;
+    background-position:center;
+  }
+  
+  .cell::before {
+    content:'';
+    position:absolute;
+    top:0;left:0;right:0;bottom:0;
+    background:inherit;
+    z-index:0;
+  }
+  
+  .cell > * {
+    position:relative;
+    z-index:1;
+  }
+  
+  .cell:hover {
+    transform: translateY(-3px) scale(1.02);
+    box-shadow: 0 8px 24px rgba(0,0,0,0.6);
+    z-index:10;
+
+    outline: 3px solid rgba(255,255,255,0.4);
+    outline-offset:2px;
+    box-shadow: 0 0 20px rgba(100,180,255,0.4);
+  }
+
+  /* Tipos de parcela con tamaños dinámicos */
+  .cell.nicho { 
+    width:var(--nicho-width);
+    height:var(--nicho-height);
+    margin-right:var(--nicho-gap);
+    background-image:var(--nicho-bg-image);
+    background-color: rgba(100,180,255,0.08);
+    /* border-color: rgba(0, 0, 0, 0.2); */
+  }
+  .cell.fosa { 
+    width:var(--fosa-width);
+    height:var(--fosa-height);
+    margin-right:var(--fosa-gap);
+    background-image:var(--fosa-bg-image);
+    background-color: rgba(255,200,100,0.08);
+    border-color: rgba(220,160,80,0.2);
+  }
+  .cell.panteon { 
+    width:var(--panteon-width);
+    height:var(--panteon-height);
+    margin-right:var(--panteon-gap);
+    background-image:var(--panteon-bg-image);
+    background-color: rgba(200,150,255,0.08);
+    border-color: rgba(180,120,220,0.2);
+  }
+
+  /* Estados de ocupación */
+  .cell.ocupado {
+    border-width:3px;
+  }
+  .cell.disponible {
+    opacity:1;
+    border-style:none;
+  }
+
+  /* Contenido celda - Número responsive al zoom */
+  .cell .numero { 
+    font-weight:700; 
+    color:#fff;
+    text-shadow: 0 2px 4px rgba(0,0,0,0.5);
+    transition: font-size 0.1s ease;
+  }
+  .cell .tipo { 
+    font-size:10px; 
+    color:#c7dceb; 
+    opacity:0.8; 
+    margin-top:4px;
+    text-transform:uppercase;
+    letter-spacing:0.5px;
+  }
+  .cell .difuntos {
+    font-size:11px;
+    color:#8bc4ff;
+    margin-top:4px;
+    font-weight:600;
+  }
+/* 
+  .cell.selected { 
+    
+  } */
+
+  /* Controles */
+  #controles {
+    position: fixed;
+    bottom: 20px;
+    left: 25%;
+    transform:translateX(-50%);
+    background: rgba(0, 0, 0, 0.85);
+    padding: 12px 16px;
+    border-radius: 12px;
+    z-index: 100;
+    display:flex;
+    gap:10px;
+    border:1px solid rgba(255,255,255,0.1);
+    backdrop-filter: blur(10px);
+  }
+  #controles button {
+    background: #146344;
+    border: none;
+    padding: 10px 18px;
+    margin: 0;
+    border-radius: 8px;
+    font-size:13px;
+  }
+  #controles button:hover {
+    background: #1a7f56;
+  }
+
+  .seccion-titulo {
+    text-align:center;
+    font-size:28px;
+    font-weight:700;
+    color:#fff;
+    margin-bottom:30px;
+    text-shadow: 0 2px 8px rgba(0,0,0,0.5);
+    user-select:none;
+  }
+
+  @media (max-width:900px){
+    .sidebar { 
+      position:fixed;
+      right:-300px;
+      top:0;
+      height:100vh;
+      z-index:1000;
+      transition:right 0.3s;
+      width:280px;
+    }
+    .sidebar.visible {
+      right:0;
+    }
+  }
+</style>
+</head>
+<body>
+<div class="app">
+  <aside class="sidebar" id="panel">
+    <h2>Información de Parcela</h2>
+    
+    <div class="info-section">
+      <div class="info-row">
+        <span class="info-label">Número de Parcela</span>
+        <span class="info-value" id="info-numero">—</span>
+      </div>
+      <div class="info-row">
+        <span class="info-label">Fila</span>
+        <span class="info-value" id="info-fila">—</span>
+      </div>
+      <div class="info-row">
+        <span class="info-label">Tipo</span>
+        <span class="info-value" id="info-tipo">—</span>
+      </div>
+    </div>
+
+    <div class="info-section">
+      <div class="info-row">
+        <span class="info-label">Difuntos</span>
+        <span class="info-value" id="info-difuntos">—</span>
+      </div>
+      <div id="info-difuntos-lista" style="margin-top:12px;"></div>
+    </div>
+
+    <h2 style="margin-top:20px">Sección</h2>
+    <div class="info-section">
+      <div class="info-row">
+        <span class="info-label">Nombre</span>
+        <span class="info-value" id="info-seccion">—</span>
+      </div>
+      <div class="info-row">
+        <span class="info-label">Total Parcelas</span>
+        <span class="info-value" id="info-total">—</span>
+      </div>
+      <div class="info-row">
+        <span class="info-label">Filas</span>
+        <span class="info-value" id="info-filas">—</span>
+      </div>
+    </div>
+  </aside>
+
+  <main class="world" id="worldRoot">
+    <div class="world-inner" id="worldInner">
+      <div class="bg-layer" id="bgLayer"></div>
+      <div class="grid" id="grid"></div>
+    </div>
+
+    <div id="controles">
+        <button id="centrar">⊙ Centrar</button>
+        <button id="acercar">+ Acercar</button>
+        <button id="alejar">− Alejar</button>
+    </div>
+  </main>
+</div>
+
+<script>
+const Datos = {
+    seccion: {id: 1, nombre: 'X1', visibilidad: true, filas: 3, nroParcelas: 24, tipoNumeracionParcelas: 1, tipoParcela: 1},
+    parcelas : [
+            {id: 1, visibilidad: true, nroParcela: 1, nroFila: 1, cantidadDifuntos: 2, seccionId: 1, tipoNichoId: 1, tipoPanteonId: null, nombrePanteon: null},
+            {id: 2, visibilidad: true, nroParcela: 2, nroFila: 1, cantidadDifuntos: 1, seccionId: 1, tipoNichoId: 1, tipoPanteonId: null, nombrePanteon: null},
+            {id: 3, visibilidad: true, nroParcela: 3, nroFila: 1, cantidadDifuntos: 0, seccionId: 1, tipoNichoId: 1, tipoPanteonId: null, nombrePanteon: null},
+            {id: 4, visibilidad: true, nroParcela: 4, nroFila: 1, cantidadDifuntos: 2, seccionId: 1, tipoNichoId: 1, tipoPanteonId: null, nombrePanteon: null},
+            {id: 13, visibilidad: true, nroParcela: 5, nroFila: 1, cantidadDifuntos: 2, seccionId: 1, tipoNichoId: 1, tipoPanteonId: null, nombrePanteon: null},
+            {id: 14, visibilidad: true, nroParcela: 6, nroFila: 1, cantidadDifuntos: 2, seccionId: 1, tipoNichoId: 1, tipoPanteonId: null, nombrePanteon: null},
+            {id: 15, visibilidad: true, nroParcela: 7, nroFila: 1, cantidadDifuntos: 2, seccionId: 1, tipoNichoId: 1, tipoPanteonId: null, nombrePanteon: null},
+            {id: 16, visibilidad: true, nroParcela: 8, nroFila: 1, cantidadDifuntos: 2, seccionId: 1, tipoNichoId: 1, tipoPanteonId: null, nombrePanteon: null},
+
+            {id: 5, visibilidad: true, nroParcela: 1, nroFila: 2, cantidadDifuntos: 1, seccionId: 1, tipoNichoId: 1, tipoPanteonId: null, nombrePanteon: null},
+            {id: 6, visibilidad: true, nroParcela: 2, nroFila: 2, cantidadDifuntos: 4, seccionId: 1, tipoNichoId: 1, tipoPanteonId: null, nombrePanteon: null},
+            {id: 7, visibilidad: true, nroParcela: 3, nroFila: 2, cantidadDifuntos: 0, seccionId: 1, tipoNichoId: 1, tipoPanteonId: null, nombrePanteon: null},
+            {id: 8, visibilidad: true, nroParcela: 4, nroFila: 2, cantidadDifuntos: 1, seccionId: 1, tipoNichoId: 1, tipoPanteonId: null, nombrePanteon: null},
+            {id: 17, visibilidad: true, nroParcela: 5, nroFila: 2, cantidadDifuntos: 2, seccionId: 1, tipoNichoId: 1, tipoPanteonId: null, nombrePanteon: null},
+            {id: 18, visibilidad: true, nroParcela: 6, nroFila: 2, cantidadDifuntos: 2, seccionId: 1, tipoNichoId: 1, tipoPanteonId: null, nombrePanteon: null},
+            {id: 19, visibilidad: true, nroParcela: 7, nroFila: 2, cantidadDifuntos: 2, seccionId: 1, tipoNichoId: 1, tipoPanteonId: null, nombrePanteon: null},
+            {id: 20, visibilidad: true, nroParcela: 8, nroFila: 2, cantidadDifuntos: 2, seccionId: 1, tipoNichoId: 1, tipoPanteonId: null, nombrePanteon: null},
+
+            {id: 9, visibilidad: true, nroParcela: 1, nroFila: 3, cantidadDifuntos: 1, seccionId: 1, tipoNichoId: 1, tipoPanteonId: null, nombrePanteon: null},
+            {id: 10, visibilidad: true, nroParcela: 2, nroFila: 3, cantidadDifuntos: 4, seccionId: 1, tipoNichoId: 1, tipoPanteonId: null, nombrePanteon: null},
+            {id: 11, visibilidad: true, nroParcela: 3, nroFila: 3, cantidadDifuntos: 0, seccionId: 1, tipoNichoId: 1, tipoPanteonId: null, nombrePanteon: null},
+            {id: 12, visibilidad: true, nroParcela: 4, nroFila: 3, cantidadDifuntos: 0, seccionId: 1, tipoNichoId: 1, tipoPanteonId: null, nombrePanteon: null},
+            {id: 21, visibilidad: true, nroParcela: 5, nroFila: 3, cantidadDifuntos: 2, seccionId: 1, tipoNichoId: 1, tipoPanteonId: null, nombrePanteon: null},
+            {id: 22, visibilidad: true, nroParcela: 6, nroFila: 3, cantidadDifuntos: 2, seccionId: 1, tipoNichoId: 1, tipoPanteonId: null, nombrePanteon: null},
+            {id: 23, visibilidad: true, nroParcela: 7, nroFila: 3, cantidadDifuntos: 2, seccionId: 1, tipoNichoId: 1, tipoPanteonId: null, nombrePanteon: null},
+            {id: 24, visibilidad: true, nroParcela: 8, nroFila: 3, cantidadDifuntos: 2, seccionId: 1, tipoNichoId: 1, tipoPanteonId: null, nombrePanteon: null},
+        ],
+    difuntos: [
+        {id: 1, nombre: 'Juan', apellido: 'Perez',dni: '12342123', visibilidad: true, fechaNacimeinto: '12/11/1923', fechaDefuncion: '13/12/2012', estadoDifuntoId: 1, sexo: 'masculino', parcelaId: 1},
+        {id: 2, nombre: 'Martin', apellido: 'Fomez',dni: '12323123', visibilidad: true, fechaNacimeinto: '20/10/1949', fechaDefuncion: '18/02/2022', estadoDifuntoId: 1, sexo: 'masculino', parcelaId: 2},
+    ]
+};
+
+const worldInner = document.getElementById('worldInner');
+const gridEl = document.getElementById('grid');
+const bgLayer = document.getElementById('bgLayer');
+const worldRoot = document.getElementById('worldRoot');
+
+const panel = {
+  numero: document.getElementById('info-numero'),
+  fila: document.getElementById('info-fila'),
+  tipo: document.getElementById('info-tipo'),
+  difuntos: document.getElementById('info-difuntos'),
+  difuntosLista: document.getElementById('info-difuntos-lista'),
+  seccion: document.getElementById('info-seccion'),
+  total: document.getElementById('info-total'),
+  filas: document.getElementById('info-filas')
+};
+
+let state = {
+  translateX: 0,
+  translateY: 0,
+  scale: 1,
+  isDragging: false,
+  startX: 0,
+  startY: 0,
+  activeCell: null
+};
+
+// Mapeo de tipos
+const tipoParcelaMap = {1: 'nicho', 2: 'fosa', 3: 'panteon'};
+const tipoNichoMap = {1: 'Féretro', 2: 'Urnario', 3: 'Especial'};
+const tipoPanteonMap = {1: 'Con nichos', 2: 'Sin nichos'};
+
+// Construir grilla desde datos
+function buildGrid(datos) {
+  gridEl.innerHTML = '';
+  
+  const seccion = datos.seccion;
+  const parcelas = datos.parcelas.filter(p => p.visibilidad);
+  
+  // Calcular columnas automáticamente
+  const filas = seccion.filas;
+  const columnas = Math.ceil(seccion.nroParcelas / filas);
+  
+  console.log(`Sección: ${seccion.nombre}, Filas: ${filas}, Columnas calculadas: ${columnas}, Total parcelas: ${seccion.nroParcelas}`);
+  
+  // Título de sección
+  const titulo = document.createElement('div');
+  titulo.className = 'seccion-titulo';
+  titulo.textContent = `Sección ${seccion.nombre}`;
+  gridEl.appendChild(titulo);
+  
+  // Configurar background según tipo de parcela
+  setBackgroundForType(tipoParcelaMap[seccion.tipoParcela]);
+  
+  // Actualizar info de sección
+  panel.seccion.textContent = seccion.nombre;
+  panel.total.textContent = seccion.nroParcelas;
+  panel.filas.textContent = `${filas} (${columnas} columnas)`;
+  
+  // Organizar parcelas por fila
+  const parcelasPorFila = {};
+  parcelas.forEach(p => {
+    if (!parcelasPorFila[p.nroFila]) {
+      parcelasPorFila[p.nroFila] = [];
+    }
+    parcelasPorFila[p.nroFila].push(p);
+  });
+  
+  // Ordenar filas (de menor a mayor, pero se invertirá con flex-direction: column-reverse)
+  const filasOrdenadas = Object.keys(parcelasPorFila).sort((a, b) => parseInt(a) - parseInt(b));
+  
+  // Crear filas
+  filasOrdenadas.forEach(nroFila => {
+    const filaWrapper = document.createElement('div');
+    filaWrapper.className = 'fila-wrapper';
+    
+    // Label de fila
+    const filaLabel = document.createElement('div');
+    filaLabel.className = 'fila-label';
+    filaLabel.textContent = `Fila ${nroFila}`;
+    filaWrapper.appendChild(filaLabel);
+    
+    const filaContainer = document.createElement('div');
+    filaContainer.className = 'fila-container';
+    
+    // Ordenar parcelas en la fila por nroParcela
+    const parcelasEnFila = parcelasPorFila[nroFila].sort((a, b) => a.nroParcela - b.nroParcela);
+    
+    parcelasEnFila.forEach(parcela => {
+      const cell = createCell(parcela, seccion, datos.difuntos);
+      filaContainer.appendChild(cell);
+    });
+    
+    filaWrapper.appendChild(filaContainer);
+    gridEl.appendChild(filaWrapper);
+  });
+  
+  // Calcular dimensiones del grid y ajustar world-inner con margen de 500px
+  setTimeout(() => {
+    const gridRect = gridEl.getBoundingClientRect();
+    const margin = 500;
+    
+    // Expandir world-inner con margen
+    const innerWidth = gridRect.width + margin * 2;
+    const innerHeight = gridRect.height + margin * 2;
+    
+    worldInner.style.width = innerWidth + 'px';
+    worldInner.style.height = innerHeight + 'px';
+    
+    centrar();
+    updateNumberSizes();
+  }, 100);
+}
+
+function createCell(parcela, seccion, difuntos) {
+  const div = document.createElement('div');
+  const tipoParcela = tipoParcelaMap[seccion.tipoParcela];
+  
+  div.className = `cell ${tipoParcela} ${parcela.cantidadDifuntos > 0 ? 'ocupado' : 'disponible'}`;
+  
+  // Determinar subtipo
+  let subtipo = '';
+  if (tipoParcela === 'nicho' && parcela.tipoNichoId) {
+    subtipo = tipoNichoMap[parcela.tipoNichoId];
+  } else if (tipoParcela === 'panteon' && parcela.tipoPanteonId) {
+    subtipo = tipoPanteonMap[parcela.tipoPanteonId];
+  }
+  
+  div.innerHTML = `
+    <div class="numero">${parcela.nroParcela}</div>
+    <div class="tipo">${subtipo || tipoParcela}</div>
+    ${parcela.cantidadDifuntos > 0 ? `<div class="difuntos">👤 ${parcela.cantidadDifuntos}</div>` : ''}
+  `;
+  
+  div.dataset.parcelaId = parcela.id;
+  div.dataset.nroParcela = parcela.nroParcela;
+  div.dataset.nroFila = parcela.nroFila;
+  div.dataset.tipo = tipoParcela;
+  div.dataset.subtipo = subtipo;
+  div.dataset.cantidadDifuntos = parcela.cantidadDifuntos;
+  
+  div.addEventListener('click', (e) => {
+    e.stopPropagation();
+    selectCell(div, parcela, difuntos);
+  });
+  
+  return div;
+}
+
+function selectCell(el, parcela, difuntos) {
+  if (state.activeCell) {
+    state.activeCell.classList.remove('selected');
+  }
+  el.classList.add('selected');
+  state.activeCell = el;
+  
+  // Actualizar panel
+  panel.numero.textContent = parcela.nroParcela;
+  panel.fila.textContent = parcela.nroFila;
+  panel.tipo.textContent = el.dataset.subtipo || el.dataset.tipo;
+  panel.difuntos.textContent = parcela.cantidadDifuntos || '0 (Disponible)';
+  
+  // Listar difuntos
+  const difuntosEnParcela = difuntos.filter(d => d.parcelaId === parcela.id && d.visibilidad);
+  panel.difuntosLista.innerHTML = '';
+  
+  if (difuntosEnParcela.length > 0) {
+    difuntosEnParcela.forEach(d => {
+      const difDiv = document.createElement('div');
+      difDiv.style.cssText = 'background:rgba(255,255,255,.3);padding:8px;border-radius:6px;margin-bottom:8px;font-size:13px;';
+      difDiv.innerHTML = `
+        <div style="font-weight:600;color:#fff;margin-bottom:4px;">${d.nombre} ${d.apellido}</div>
+        <div style="color:#bcd3e8;font-size:11px;">DNI: ${d.dni}</div>
+        <div style="color:#bcd3e8;font-size:11px;">✝ ${d.fechaDefuncion}</div>
+      `;
+      panel.difuntosLista.appendChild(difDiv);
+    });
+  } else {
+    panel.difuntosLista.innerHTML = '<div style="color:#888;font-size:12px;font-style:italic;">Sin difuntos registrados</div>';
+  }
+}
+
+function setBackgroundForType(tipo) {
+  bgLayer.style.backgroundImage = '';
+  
+  if (tipo === 'nicho') {
+    bgLayer.style.backgroundImage = 'url(imagenes/fondoNicho4.png)';
+  } else if (tipo === 'fosa') {
+    bgLayer.style.backgroundImage = 'url(https://images.unsplash.com/photo-1502082553048-f009c37129b9?w=400&q=80)';
+  } else if (tipo === 'panteon') {
+    bgLayer.style.backgroundImage = 'url(https://images.unsplash.com/photo-1519681393784-d120267933ba?w=400&q=80)';
+  }
+}
+
+function applyTransform() {
+  const t = `translate(${state.translateX}px, ${state.translateY}px) scale(${state.scale})`;
+  worldInner.style.transform = t;
+  updateNumberSizes();
+}
+
+// Actualizar tamaño de números según zoom
+function updateNumberSizes() {
+  const allNumbers = document.querySelectorAll('.cell .numero');
+  
+  // Escala inversa: cuando zoom es pequeño (alejado), números más grandes
+  // cuando zoom es grande (acercado), números más pequeños
+  const minFontSize = 14;
+  const maxFontSize = 44;
+  
+  // Calcular tamaño inversamente proporcional al zoom
+  let fontSize = minFontSize + (1 - state.scale) * 40;
+  fontSize = Math.max(minFontSize, Math.min(maxFontSize, fontSize));
+  
+  allNumbers.forEach(num => {
+    num.style.fontSize = fontSize + 'px';
+  });
+}
+
+function centrar() {
+  const worldRect = worldRoot.getBoundingClientRect();
+  const gridRect = gridEl.getBoundingClientRect();
+  
+  // Calcular escala para que la grilla quepa en la ventana
+  const scaleX = (worldRect.width - 100) / gridRect.width;
+  const scaleY = (worldRect.height - 100) / gridRect.height;
+  const targetScale = Math.min(scaleX, scaleY, 1);
+  
+  state.scale = Math.max(0.3, targetScale);
+  
+  // Centrar la grilla en la pantalla
+  state.translateX = (worldRect.width - gridRect.width * state.scale) / 2;
+  state.translateY = (worldRect.height - gridRect.height * state.scale) / 2;
+  
+  applyTransform();
+}
+
+// Dragging - Solo desde world-inner
+worldInner.addEventListener('mousedown', (e) => {
+  // Permitir arrastre solo si no es una celda o botón
+  if (e.target.tagName === 'BUTTON') return;
+  
+  state.isDragging = true;
+  state.startX = e.clientX - state.translateX;
+  state.startY = e.clientY - state.translateY;
+  worldInner.classList.add('dragging');
+  e.preventDefault();
+});
+
+document.addEventListener('mousemove', (e) => {
+  if (state.isDragging) {
+    state.translateX = e.clientX - state.startX;
+    state.translateY = e.clientY - state.startY;
+    applyTransform();
+  }
+});
+
+document.addEventListener('mouseup', () => {
+  state.isDragging = false;
+  worldInner.classList.remove('dragging');
+});
+
+// Zoom con rueda
+worldRoot.addEventListener('wheel', (e) => {
+  e.preventDefault();
+  const delta = -e.deltaY;
+  const zoomFactor = delta > 0 ? 1.1 : 0.9;
+  
+  const rect = worldRoot.getBoundingClientRect();
+  const x = e.clientX - rect.left;
+  const y = e.clientY - rect.top;
+  
+  const wx = (x - state.translateX) / state.scale;
+  const wy = (y - state.translateY) / state.scale;
+  
+  state.scale = Math.min(3, Math.max(0.3, state.scale * zoomFactor));
+  
+  state.translateX = x - wx * state.scale;
+  state.translateY = y - wy * state.scale;
+  
+  applyTransform();
+}, {passive: false});
+
+// Botones de control
+document.getElementById('acercar').addEventListener('click', () => {
+  state.scale = Math.min(3, state.scale * 1.2);
+  applyTransform();
+});
+
+document.getElementById('alejar').addEventListener('click', () => {
+  state.scale = Math.max(0.3, state.scale * 0.8);
+  applyTransform();
+});
+
+document.getElementById('centrar').addEventListener('click', () => {
+  centrar();
+  updateNumberSizes();
+});
+
+// Click fuera deselecciona - Mejorado
+worldRoot.addEventListener('click', (e) => {
+  // Solo deseleccionar si se hace click en el fondo, no en las celdas
+  if (!e.target.closest('.cell') && state.activeCell) {
+    state.activeCell.classList.remove('selected');
+    state.activeCell = null;
+  }
+});
+
+// Inicializar
+buildGrid(Datos);
+</script>
+</body>
+</html>
