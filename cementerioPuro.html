@@ -22,14 +22,14 @@
     --fosa-gap: 20px;
     --fosa-bg-image: url('imagenes/fondo-fosa-placa.png');
     
-    --panteon-width: 150px;
-    --panteon-height: 150px;
-    --panteon-gap: 10px;
-    --panteon-bg-image: none;
+    --panteon-width: 550px;
+    --panteon-height: 800px;
+    --panteon-gap: 20px;
+    --panteon-bg-image: url('imagenes/panteonPNG.png');
 
     --nicho-placa-image: url('imagenes/placa-nicho2-placa2.png');
     --fosa-placa-image: url('imagenes/placa-nicho.jpg');
-    --panteon-placa-image: url('imagenes/placa-nicho.jpg');
+    --panteon-placa-image: url('imagenes/placa-panteon.jpg');
   }
   html,body{
     height:100%;
@@ -225,7 +225,7 @@
 
     outline: 3px solid rgba(255,255,255,0.4);
     outline-offset:2px;
-    box-shadow: 0 0 20px rgba(100,180,255,0.4);
+    box-shadow: 0 0 30px rgba(100,180,255,0.4);
   }
 
   
@@ -265,8 +265,14 @@
     height:var(--panteon-height);
     margin-right:var(--panteon-gap);
     background-image:var(--panteon-bg-image);
-    background-color: rgba(200,150,255,0.08);
+    /* background-color: rgba(200,150,255,0.08); */
     border-color: rgba(180,120,220,0.2);
+  }
+
+  .cell.panteon:hover {
+    outline: 5px solid rgba(15, 14, 14, 0.4);
+    outline-offset:4px;
+    box-shadow: 0 0 30px rgba(89, 89, 90, 0.4);
   }
 
 
@@ -388,9 +394,11 @@
 }
 
 .cell.panteon .placa-memorial {
-  width: 85%;
-  height: 70%;
+  width: 25%;
+  height: 40%;
   background-image: var(--panteon-placa-image);
+  top: 35%;
+  left: 50%;
 }
 
 .placa-text {
@@ -488,7 +496,7 @@
 
 <script>
 const Datos = {
-    seccion: {id: 1, nombre: 'X1', visibilidad: true, filas: 3, nroParcelas: 24, tipoNumeracionParcelas: 1, tipoParcela: 1},
+    seccion: {id: 1, nombre: 'X1', visibilidad: true, filas: 3, nroParcelas: 24, tipoNumeracionParcelas: 1, tipoParcela: 3},
     parcelas : [
             {id: 1, visibilidad: true, nroParcela: 1, nroFila: 1, cantidadDifuntos: 2, seccionId: 1, tipoNichoId: 1, tipoPanteonId: null, nombrePanteon: null},
             {id: 2, visibilidad: true, nroParcela: 2, nroFila: 1, cantidadDifuntos: 1, seccionId: 1, tipoNichoId: 1, tipoPanteonId: null, nombrePanteon: null},
@@ -520,6 +528,9 @@ const Datos = {
     difuntos: [
         {id: 1, nombre: 'Juan', apellido: 'Perez',dni: '12342123', visibilidad: true, fechaNacimeinto: '12/11/1923', fechaDefuncion: '13/12/2012', estadoDifuntoId: 1, sexo: 'masculino', parcelaId: 1},
         {id: 2, nombre: 'Martin', apellido: 'Fomez',dni: '12323123', visibilidad: true, fechaNacimeinto: '20/10/1949', fechaDefuncion: '18/02/2022', estadoDifuntoId: 1, sexo: 'masculino', parcelaId: 2},
+        {id: 3, nombre: 'Oscar', apellido: 'Piastri',dni: '12323123', visibilidad: true, fechaNacimeinto: '20/10/1949', fechaDefuncion: '18/02/2022', estadoDifuntoId: 1, sexo: 'masculino', parcelaId: 1},
+        {id: 4, nombre: 'Oscar', apellido: 'Piastri',dni: '12323123', visibilidad: true, fechaNacimeinto: '20/10/1949', fechaDefuncion: '18/02/2022', estadoDifuntoId: 1, sexo: 'masculino', parcelaId: 24},
+
     ]
 };
 
@@ -602,8 +613,10 @@ function buildGrid(datos) {
     const filaLabel = document.createElement('div');
     filaLabel.className = 'fila-label';
     filaLabel.textContent = `Fila ${nroFila}`;
-    filaWrapper.appendChild(filaLabel);
     
+     if(tipoParcelaMap[seccion.tipoParcela] === 'nicho'){
+          filaWrapper.appendChild(filaLabel);
+    }
     const filaContainer = document.createElement('div');
     filaContainer.className = 'fila-container';
     
@@ -615,8 +628,11 @@ function buildGrid(datos) {
       filaContainer.appendChild(cell);
     });
     
+   
+
     filaWrapper.appendChild(filaContainer);
     gridEl.appendChild(filaWrapper);
+    
   });
   
   // Calcular dimensiones del grid y ajustar world-inner con margen de 500px
@@ -727,11 +743,11 @@ function setBackgroundForType(tipo) {
   bgLayer.style.backgroundImage = '';
   
   if (tipo === 'nicho') {
-    bgLayer.style.backgroundImage = 'url(imagenes/fondoNicho4.png)';
+    bgLayer.style.backgroundImage = 'url(imagenes/paredNicho.png)';
   } else if (tipo === 'fosa') {
     bgLayer.style.backgroundImage = 'url(imagenes/fondoFosa4.jpg)';
   } else if (tipo === 'panteon') {
-    bgLayer.style.backgroundImage = 'url(https://images.unsplash.com/photo-1519681393784-d120267933ba?w=400&q=80)';
+    bgLayer.style.backgroundImage = 'url(imagenes/ladrillo.jpg)';
   }
 }
 
