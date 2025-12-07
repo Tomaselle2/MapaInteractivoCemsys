@@ -17,15 +17,19 @@
     --nicho-gap: 0;
     --nicho-bg-image: url('imagenes/nicho.png');
     
-    --fosa-width: 200px;
-    --fosa-height: 80px;
-    --fosa-gap: 8px;
-    --fosa-bg-image: none;
+    --fosa-width: 300px;
+    --fosa-height: 500px;
+    --fosa-gap: 20px;
+    --fosa-bg-image: url('imagenes/fondo-fosa-placa.png');
     
     --panteon-width: 150px;
     --panteon-height: 150px;
     --panteon-gap: 10px;
     --panteon-bg-image: none;
+
+    --nicho-placa-image: url('imagenes/placa-nicho2-placa2.png');
+    --fosa-placa-image: url('imagenes/placa-nicho.jpg');
+    --panteon-placa-image: url('imagenes/placa-nicho.jpg');
   }
   html,body{
     height:100%;
@@ -224,6 +228,8 @@
     box-shadow: 0 0 20px rgba(100,180,255,0.4);
   }
 
+  
+
   /* Tipos de parcela con tamaños dinámicos */
   .cell.nicho { 
     width:var(--nicho-width);
@@ -240,7 +246,20 @@
     background-image:var(--fosa-bg-image);
     background-color: rgba(255,200,100,0.08);
     border-color: rgba(220,160,80,0.2);
+    margin-bottom: 30px;
+
+     /* Feather en TODOS los bordes */
+    mask-image:
+        linear-gradient(to right, transparent 0%, black 10%, black 90%, transparent 100%),
+        linear-gradient(to bottom, transparent 0%, black 10%, black 90%, transparent 100%);
+    mask-composite: intersect;
+
+    -webkit-mask-image:
+        linear-gradient(to right, transparent 0%, black 10%, black 90%, transparent 100%),
+        linear-gradient(to bottom, transparent 0%, black 10%, black 90%, transparent 100%);
+    -webkit-mask-composite: intersect;
   }
+
   .cell.panteon { 
     width:var(--panteon-width);
     height:var(--panteon-height);
@@ -249,6 +268,8 @@
     background-color: rgba(200,150,255,0.08);
     border-color: rgba(180,120,220,0.2);
   }
+
+
 
   /* Estados de ocupación */
   .cell.ocupado {
@@ -263,9 +284,27 @@
   .cell .numero { 
     font-weight:700; 
     color:#fff;
-    text-shadow: 0 2px 4px rgba(0,0,0,0.5);
+    text-shadow: 0 2px 4px rgba(0,0,0,0.8);
     transition: font-size 0.1s ease;
+    position: absolute;
+    z-index: 10;
   }
+
+  .cell.nicho .numero {
+    top: 60px;
+    left: 45px;
+    }
+
+    .cell.fosa .numero {
+    top: 60px;
+    left: 80px;
+    }
+
+    .cell.panteon .numero {
+    top: 6px;
+    left: 6px;
+    }
+
   .cell .tipo { 
     font-size:10px; 
     color:#c7dceb; 
@@ -280,10 +319,6 @@
     margin-top:4px;
     font-weight:600;
   }
-/* 
-  .cell.selected { 
-    
-  } */
 
   /* Controles */
   #controles {
@@ -321,6 +356,60 @@
     text-shadow: 0 2px 8px rgba(0,0,0,0.5);
     user-select:none;
   }
+
+  /* Estilos para las placas  */
+  .placa-memorial {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  background-size: contain;
+  background-repeat: no-repeat;
+  background-position: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  z-index: 5;
+  pointer-events: none;
+}
+
+.cell.nicho .placa-memorial {
+  width: 90%;
+  height: 100%;
+  background-image: var(--nicho-placa-image);
+}
+
+.cell.fosa .placa-memorial {
+  width: 70%;
+  height: 40%;
+  background-image: var(--fosa-placa-image);
+}
+
+.cell.panteon .placa-memorial {
+  width: 85%;
+  height: 70%;
+  background-image: var(--panteon-placa-image);
+}
+
+.placa-text {
+  color: #1a1a1a;
+  font-weight: 700;
+  text-shadow: 0 1px 2px rgba(255,255,255,0.3);
+  transition: font-size 0.1s ease;
+  line-height: 1.3;
+  padding: 0 10%;
+}
+
+.placa-nombre {
+  margin-bottom: 4px;
+}
+
+.placa-fecha {
+  font-weight: 600;
+  opacity: 0.8;
+}
 
   @media (max-width:900px){
     .sidebar { 
@@ -533,7 +622,7 @@ function buildGrid(datos) {
   // Calcular dimensiones del grid y ajustar world-inner con margen de 500px
   setTimeout(() => {
     const gridRect = gridEl.getBoundingClientRect();
-    const margin = 500;
+    const margin = 700;
     
     // Expandir world-inner con margen
     const innerWidth = gridRect.width + margin * 2;
@@ -553,7 +642,6 @@ function createCell(parcela, seccion, difuntos) {
   
   div.className = `cell ${tipoParcela} ${parcela.cantidadDifuntos > 0 ? 'ocupado' : 'disponible'}`;
   
-  // Determinar subtipo
   let subtipo = '';
   if (tipoParcela === 'nicho' && parcela.tipoNichoId) {
     subtipo = tipoNichoMap[parcela.tipoNichoId];
@@ -566,6 +654,26 @@ function createCell(parcela, seccion, difuntos) {
     <div class="tipo">${subtipo || tipoParcela}</div>
     ${parcela.cantidadDifuntos > 0 ? `<div class="difuntos">👤 ${parcela.cantidadDifuntos}</div>` : ''}
   `;
+  
+  // Agregar placa si está ocupado
+  if (parcela.cantidadDifuntos > 0) {
+    const difuntosEnParcela = difuntos.filter(d => d.parcelaId === parcela.id && d.visibilidad);
+    if (difuntosEnParcela.length > 0) {
+      const primerDifunto = difuntosEnParcela[0];
+      const placa = document.createElement('div');
+      placa.className = 'placa-memorial';
+      
+      const nombreCompleto = `${primerDifunto.nombre} ${primerDifunto.apellido}`;
+      const fechas = `${primerDifunto.fechaNacimeinto || '?'} - ${primerDifunto.fechaDefuncion || '?'}`;
+      
+      placa.innerHTML = `
+        <div class="placa-text placa-nombre">${nombreCompleto}</div>
+        <div class="placa-text placa-fecha">${fechas}</div>
+      `;
+      
+      div.appendChild(placa);
+    }
+  }
   
   div.dataset.parcelaId = parcela.id;
   div.dataset.nroParcela = parcela.nroParcela;
@@ -621,7 +729,7 @@ function setBackgroundForType(tipo) {
   if (tipo === 'nicho') {
     bgLayer.style.backgroundImage = 'url(imagenes/fondoNicho4.png)';
   } else if (tipo === 'fosa') {
-    bgLayer.style.backgroundImage = 'url(https://images.unsplash.com/photo-1502082553048-f009c37129b9?w=400&q=80)';
+    bgLayer.style.backgroundImage = 'url(imagenes/fondoFosa4.jpg)';
   } else if (tipo === 'panteon') {
     bgLayer.style.backgroundImage = 'url(https://images.unsplash.com/photo-1519681393784-d120267933ba?w=400&q=80)';
   }
@@ -636,35 +744,53 @@ function applyTransform() {
 // Actualizar tamaño de números según zoom
 function updateNumberSizes() {
   const allNumbers = document.querySelectorAll('.cell .numero');
+  const allPlacaTexts = document.querySelectorAll('.placa-text');
   
-  // Escala inversa: cuando zoom es pequeño (alejado), números más grandes
-  // cuando zoom es grande (acercado), números más pequeños
-  const minFontSize = 14;
-  const maxFontSize = 44;
+  const minFontSize = 18;
+  const maxFontSize = 56;
   
-  // Calcular tamaño inversamente proporcional al zoom
-  let fontSize = minFontSize + (1 - state.scale) * 40;
+  let fontSize = minFontSize + (1 - state.scale) * 50;
   fontSize = Math.max(minFontSize, Math.min(maxFontSize, fontSize));
   
   allNumbers.forEach(num => {
     num.style.fontSize = fontSize + 'px';
   });
+  
+  // Ajustar tamaño de texto de placas
+  const minPlacaSize = 16;
+  const maxPlacaSize = 20;
+  let placaFontSize = minPlacaSize + (1 - state.scale) * 18;
+  placaFontSize = Math.max(minPlacaSize, Math.min(maxPlacaSize, placaFontSize));
+  
+  allPlacaTexts.forEach(text => {
+    if (text.classList.contains('placa-nombre')) {
+      text.style.fontSize = placaFontSize + 'px';
+    } else if (text.classList.contains('placa-fecha')) {
+      text.style.fontSize = (placaFontSize * 0.8) + 'px';
+    }
+  });
 }
 
 function centrar() {
+  // Resetear transformación temporalmente para obtener medidas reales
+  const originalTransform = worldInner.style.transform;
+  worldInner.style.transform = 'scale(1)';
+  
   const worldRect = worldRoot.getBoundingClientRect();
   const gridRect = gridEl.getBoundingClientRect();
   
-  // Calcular escala para que la grilla quepa en la ventana
-  const scaleX = (worldRect.width - 100) / gridRect.width;
-  const scaleY = (worldRect.height - 100) / gridRect.height;
-  const targetScale = Math.min(scaleX, scaleY, 1);
+  // Restaurar transformación
+  worldInner.style.transform = originalTransform;
   
-  state.scale = Math.max(0.3, targetScale);
+  // Calcular escala
+  const scaleX = (worldRect.width - 150) / gridRect.width;
+  const scaleY = (worldRect.height - 200) / gridRect.height;
+  state.scale = Math.max(0.3, Math.min(scaleX, scaleY, 1));
   
-  // Centrar la grilla en la pantalla
-  state.translateX = (worldRect.width - gridRect.width * state.scale) / 2;
-  state.translateY = (worldRect.height - gridRect.height * state.scale) / 2;
+  // Centrar: el grid ya está en 50%/50% del worldInner
+  // Solo necesitamos asegurar que worldInner esté posicionado para centrar el grid
+  state.translateX = 0;
+  state.translateY = 0;
   
   applyTransform();
 }
