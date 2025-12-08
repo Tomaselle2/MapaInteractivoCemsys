@@ -432,8 +432,8 @@
 }
 
 .cell.panteon .placa-memorial {
-  width: 25%;
-  height: 40%;
+  width: 28%;
+  height: 43%;
   background-image: var(--panteon-placa-image);
   top: 35%;
   left: 50%;
@@ -456,6 +456,18 @@
   font-weight: 600;
   opacity: 0.8;
 }
+
+.nombreDifunto{
+    font-weight: 700;
+    font-size: 18px;
+    color: #fafafa;
+    margin-bottom: 2px;
+}
+
+.infoDifunto{
+    font-size: 14px;
+    color: #f4f1f1;
+    margin-bottom: 6px;}
 
   @media (max-width:900px){
     .sidebar { 
@@ -480,7 +492,7 @@
     
     <div class="info-section">
       <div class="info-row">
-        <span class="info-label">Número de Parcela</span>
+        <span class="info-label">Número de Parcela / Lote</span>
         <span class="info-value" id="info-numero">—</span>
       </div>
       <div class="info-row">
@@ -561,7 +573,7 @@ const Datos = {
             {id: 21, visibilidad: true, nroParcela: 5, nroFila: 3, cantidadDifuntos: 2, seccionId: 1, tipoNichoId: 1, tipoPanteonId: null, nombrePanteon: null},
             {id: 22, visibilidad: true, nroParcela: 6, nroFila: 3, cantidadDifuntos: 2, seccionId: 1, tipoNichoId: 1, tipoPanteonId: null, nombrePanteon: null},
             {id: 23, visibilidad: true, nroParcela: 7, nroFila: 3, cantidadDifuntos: 2, seccionId: 1, tipoNichoId: 1, tipoPanteonId: null, nombrePanteon: null},
-            {id: 24, visibilidad: true, nroParcela: 8, nroFila: 3, cantidadDifuntos: 2, seccionId: 1, tipoNichoId: 1, tipoPanteonId: null, nombrePanteon: null},
+            {id: 24, visibilidad: true, nroParcela: 8, nroFila: 3, cantidadDifuntos: 2, seccionId: 1, tipoNichoId: 1, tipoPanteonId: 1, nombrePanteon: 'Flia Gomez'},
         ],
     difuntos: [
         {id: 1, nombre: 'Juan', apellido: 'Perez',dni: '12342123', visibilidad: true, fechaNacimeinto: '12/11/1923', fechaDefuncion: '13/12/2012', estadoDifuntoId: 1, sexo: 'masculino', parcelaId: 1},
@@ -602,6 +614,7 @@ let state = {
 const tipoParcelaMap = {1: 'nicho', 2: 'fosa', 3: 'panteon'};
 const tipoNichoMap = {1: 'Féretro', 2: 'Urnario', 3: 'Especial'};
 const tipoPanteonMap = {1: 'Con nichos', 2: 'Sin nichos'};
+const estadoDifunto = {1: 'Cuerpo completo', 2: 'Reducido', 3: 'Cremado'};
 
 // Construir grilla desde datos
 function buildGrid(datos) {
@@ -704,10 +717,7 @@ function createCell(parcela, seccion, difuntos) {
   }
   
   div.innerHTML = `
-    <div class="numero">${parcela.nroParcela}</div>
-    <div class="tipo">${subtipo || tipoParcela}</div>
-    ${parcela.cantidadDifuntos > 0 ? `<div class="difuntos">👤 ${parcela.cantidadDifuntos}</div>` : ''}
-  `;
+    <div class="numero">${parcela.nroParcela}</div>`;
   
   // Agregar placa si está ocupado
   if (parcela.cantidadDifuntos > 0) {
@@ -719,11 +729,17 @@ function createCell(parcela, seccion, difuntos) {
       
       const nombreCompleto = `${primerDifunto.nombre} ${primerDifunto.apellido}`;
       const fechas = `${primerDifunto.fechaNacimeinto || '?'} - ${primerDifunto.fechaDefuncion || '?'}`;
-      
-      placa.innerHTML = `
+      const nombrePanteon = `${parcela.nombrePanteon || '-----'}`;
+
+      if(tipoParcela != 'panteon'){
+        placa.innerHTML = `
         <div class="placa-text placa-nombre">${nombreCompleto}</div>
-        <div class="placa-text placa-fecha">${fechas}</div>
-      `;
+        <div class="placa-text placa-fecha">${fechas}</div>`;
+      } else {
+        placa.innerHTML = `
+        <div class="placa-text placa-nombre">${nombrePanteon}</div>`;
+      }
+      
       
       div.appendChild(placa);
     }
@@ -753,7 +769,9 @@ function selectCell(el, parcela, difuntos) {
   
   // Actualizar panel
   panel.numero.textContent = parcela.nroParcela;
-  panel.fila.textContent = parcela.nroFila;
+  if(el.dataset.subtipo === 'nicho' || el.dataset.tipo === 'nicho'){
+    panel.fila.textContent = parcela.nroFila;
+  }
   panel.tipo.textContent = el.dataset.subtipo || el.dataset.tipo;
   panel.difuntos.textContent = parcela.cantidadDifuntos || '0 (Disponible)';
   
@@ -766,9 +784,12 @@ function selectCell(el, parcela, difuntos) {
       const difDiv = document.createElement('div');
       difDiv.style.cssText = 'background:rgba(255,255,255,.3);padding:8px;border-radius:6px;margin-bottom:8px;font-size:13px;';
       difDiv.innerHTML = `
-        <div style="font-weight:600;color:#fff;margin-bottom:4px;">${d.nombre} ${d.apellido}</div>
-        <div style="color:#bcd3e8;font-size:11px;">DNI: ${d.dni}</div>
-        <div style="color:#bcd3e8;font-size:11px;">✝ ${d.fechaDefuncion}</div>
+        <div class="nombreDifunto"> ${d.nombre} ${d.apellido}</div>
+        <div class="infoDifunto"> 🪪 ${d.dni}</div>
+        <div class="infoDifunto"> ⚧️ ${d.sexo}</div>
+        <div class="infoDifunto"> ❤️ ${d.fechaNacimeinto}</div>
+        <div class="infoDifunto"> 🪦 ${d.fechaDefuncion}</div>
+        <div class="infoDifunto"> 🩻 ${estadoDifunto[d.estadoDifuntoId] || d.estadoDifuntoId}</div>
       `;
       panel.difuntosLista.appendChild(difDiv);
     });
