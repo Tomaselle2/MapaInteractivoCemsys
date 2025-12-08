@@ -25,7 +25,7 @@
     --panteon-width: 550px;
     --panteon-height: 800px;
     --panteon-gap: 20px;
-    --panteon-bg-image: url('imagenes/panteonPNG.png');
+    --panteon-bg-image: url('imagenes/panteonPNG1.png');
 
     --nicho-placa-image: url('imagenes/placa-nicho2-placa2.png');
     --fosa-placa-image: url('imagenes/placa-nicho.jpg');
@@ -307,8 +307,8 @@
     }
 
     .cell.panteon .numero {
-    top: 6px;
-    left: 6px;
+    top: 195px;
+    left: 60px;
     }
 
   .cell .tipo { 
@@ -385,12 +385,50 @@
   width: 90%;
   height: 100%;
   background-image: var(--nicho-placa-image);
+
+  /* Standard mask (para navegadores que soportan mask-composite) */
+  mask-image:
+    linear-gradient(to right, transparent 0%, black 12%, black 88%, transparent 100%), /* izquierda→derecha */
+    linear-gradient(to left,  transparent 0%, black 12%, black 88%, transparent 100%), /* derecha→izquierda */
+    linear-gradient(to bottom, transparent 0%, black 12%, black 88%, transparent 100%), /* arriba→abajo */
+    linear-gradient(to top,    transparent 0%, black 12%, black 88%, transparent 100%); /* abajo→arriba */
+  mask-composite: intersect;
+
+  /* WebKit (Chrome, Safari): hay que usar source-over / source-in por capa */
+  -webkit-mask-image:
+    linear-gradient(to right, transparent 0%, black 12%, black 88%, transparent 100%),
+    linear-gradient(to left,  transparent 0%, black 12%, black 88%, transparent 100%),
+    linear-gradient(to bottom, transparent 0%, black 12%, black 88%, transparent 100%),
+    linear-gradient(to top,    transparent 0%, black 12%, black 88%, transparent 100%);
+  /* la primera capa: source-over, las siguientes: source-in -> efectúa la intersección */
+  -webkit-mask-composite: source-over, source-in, source-in, source-in;
+  /* en algunas versiones antiguas de webkit puede ser -webkit-mask-composite: xor; 
+  si lo anterior no funciona prueba con source-in en todas las capas (o usa la alternativa SVG abajo). */
 }
 
 .cell.fosa .placa-memorial {
   width: 70%;
   height: 40%;
   background-image: var(--fosa-placa-image);
+
+   /* Standard mask (para navegadores que soportan mask-composite) */
+  mask-image:
+    linear-gradient(to right, transparent 0%, black 12%, black 82%, transparent 100%), /* izquierda→derecha */
+    linear-gradient(to left,  transparent 0%, black 12%, black 82%, transparent 100%), /* derecha→izquierda */
+    linear-gradient(to bottom, transparent 0%, black 12%, black 82%, transparent 100%), /* arriba→abajo */
+    linear-gradient(to top,    transparent 0%, black 12%, black 82%, transparent 100%); /* abajo→arriba */
+  mask-composite: intersect;
+
+  /* WebKit (Chrome, Safari): hay que usar source-over / source-in por capa */
+  -webkit-mask-image:
+    linear-gradient(to right, transparent 0%, black 12%, black 82%, transparent 100%),
+    linear-gradient(to left,  transparent 0%, black 12%, black 82%, transparent 100%),
+    linear-gradient(to bottom, transparent 0%, black 12%, black 82%, transparent 100%),
+    linear-gradient(to top,    transparent 0%, black 12%, black 82%, transparent 100%);
+  /* la primera capa: source-over, las siguientes: source-in -> efectúa la intersección */
+  -webkit-mask-composite: source-over, source-in, source-in, source-in;
+  /* en algunas versiones antiguas de webkit puede ser -webkit-mask-composite: xor; 
+     si lo anterior no funciona prueba con source-in en todas las capas (o usa la alternativa SVG abajo). */
 }
 
 .cell.panteon .placa-memorial {
@@ -762,7 +800,7 @@ function updateNumberSizes() {
   const allNumbers = document.querySelectorAll('.cell .numero');
   const allPlacaTexts = document.querySelectorAll('.placa-text');
   
-  const minFontSize = 18;
+  const minFontSize = 20;
   const maxFontSize = 56;
   
   let fontSize = minFontSize + (1 - state.scale) * 50;
