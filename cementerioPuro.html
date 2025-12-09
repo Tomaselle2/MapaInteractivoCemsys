@@ -30,6 +30,12 @@
     --nicho-placa-image: url('imagenes/placa-nicho2-placa2.png');
     --fosa-placa-image: url('imagenes/placa-nicho.jpg');
     --panteon-placa-image: url('imagenes/placa-panteon.jpg');
+
+        /* Configuración para panteón sin nichos (féretros) */
+    --feretro-width: 500px;
+    --feretro-height: 650px;
+    --feretro-gap: 20px;
+    --feretro-bg-image: url('imagenes/feretro.png');
   }
   html,body{
     height:100%;
@@ -355,11 +361,11 @@
 
   .seccion-titulo {
     text-align:center;
-    font-size:28px;
+    font-size:32px;
     font-weight:700;
     color:#fff;
     margin-bottom:30px;
-    text-shadow: 0 2px 8px rgba(0,0,0,0.5);
+    text-shadow: 0 4px 8px rgba(0,0,0,0.5);
     user-select:none;
   }
 
@@ -439,6 +445,22 @@
   left: 50%;
 }
 
+.cell.feretro .placa-memorial {
+  width: 30%;
+  height: 50%;
+  background-image: var(--panteon-placa-image); /* o crea una variable específica */
+  
+  /* Ajusta la posición de la placa dentro del féretro */
+  top: 25%;  /* Cambia este valor para mover verticalmente */
+  left: 50%; /* Cambia este valor para mover horizontalmente */
+  
+  /* Ejemplo: si quieres moverla más arriba */
+  /* top: 35%; */
+  
+  /* Ejemplo: si quieres moverla a la izquierda */
+  /* left: 40%; */
+}
+
 .placa-text {
   color: #1a1a1a;
   font-weight: 700;
@@ -468,6 +490,78 @@
     font-size: 14px;
     color: #f4f1f1;
     margin-bottom: 6px;}
+
+
+/* Estilos de panteon */
+#botonEntrarPanteon {
+    position: absolute;
+    /* Quitar: bottom, left, transform anteriores */
+    top: 70%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    border: none;
+    padding: 12px 24px;
+    border-radius: 10px;
+    z-index: 15;
+    font-size: 14px;
+    font-weight: 700;
+    color: white;
+    cursor: pointer;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.6);
+    transition: all 0.3s ease;
+    display: none;
+    pointer-events: auto;
+    
+    /* Ajusta estos valores para centrar en la puerta */
+    width: 140px;
+    height: 50px;
+}
+
+#botonEntrarPanteon:hover {
+    transform: translate(-50%, -50%) scale(1.05);
+    box-shadow: 0 6px 25px rgba(102, 126, 234, 0.8);
+}
+
+/* Estilos para féretros */
+.cell.feretro { 
+    width: var(--feretro-width);
+    height: var(--feretro-height);
+    margin-right: var(--feretro-gap);
+    background-image: var(--feretro-bg-image);
+    background-color: rgba(139, 69, 19, 0.08);
+    border-color: rgba(139, 69, 19, 0.2);
+    margin-bottom: 20px;
+}
+
+.cell.feretro .numero {
+    top: 20px;
+    left: 30px;
+}
+
+
+#botonVolverPanteon {
+    position: fixed;
+    top: 20px;
+    right: 100px;
+    background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+    border: none;
+    padding: 12px 24px;
+    border-radius: 10px;
+    z-index: 100;
+    font-size: 14px;
+    font-weight: 700;
+    color: white;
+    cursor: pointer;
+    box-shadow: 0 4px 15px rgba(245, 87, 108, 0.4);
+    transition: all 0.3s ease;
+    display: none;
+}
+
+#botonVolverPanteon:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(245, 87, 108, 0.6);
+}
 
   @media (max-width:900px){
     .sidebar { 
@@ -541,12 +635,15 @@
         <button id="acercar">+ Acercar</button>
         <button id="alejar">− Alejar</button>
     </div>
+
+    <button id="botonEntrarPanteon">🚪 Entrar al Panteón</button>
+<button id="botonVolverPanteon">← Volver a Panteones</button>
   </main>
 </div>
 
 <script>
 const Datos = {
-    seccion: {id: 1, nombre: 'X1', visibilidad: true, filas: 3, nroParcelas: 24, tipoNumeracionParcelas: 1, tipoParcela: 3},
+    seccion: {id: 1, nombre: 'X1', visibilidad: true, filas: 3, nroParcelas: 24, tipoNumeracionParcelas: 1, tipoParcela: 1},
     parcelas : [
             {id: 1, visibilidad: true, nroParcela: 1, nroFila: 1, cantidadDifuntos: 2, seccionId: 1, tipoNichoId: 1, tipoPanteonId: null, nombrePanteon: null},
             {id: 2, visibilidad: true, nroParcela: 2, nroFila: 1, cantidadDifuntos: 1, seccionId: 1, tipoNichoId: 1, tipoPanteonId: null, nombrePanteon: null},
@@ -607,7 +704,9 @@ let state = {
   isDragging: false,
   startX: 0,
   startY: 0,
-  activeCell: null
+  activeCell: null,
+  vistaPanteon: false,
+  panteonActual: null
 };
 
 // Mapeo de tipos
@@ -623,27 +722,22 @@ function buildGrid(datos) {
   const seccion = datos.seccion;
   const parcelas = datos.parcelas.filter(p => p.visibilidad);
   
-  // Calcular columnas automáticamente
   const filas = seccion.filas;
   const columnas = Math.ceil(seccion.nroParcelas / filas);
   
   console.log(`Sección: ${seccion.nombre}, Filas: ${filas}, Columnas calculadas: ${columnas}, Total parcelas: ${seccion.nroParcelas}`);
   
-  // Título de sección
   const titulo = document.createElement('div');
   titulo.className = 'seccion-titulo';
   titulo.textContent = `Sección ${seccion.nombre}`;
   gridEl.appendChild(titulo);
   
-  // Configurar background según tipo de parcela
   setBackgroundForType(tipoParcelaMap[seccion.tipoParcela]);
   
-  // Actualizar info de sección
   panel.seccion.textContent = seccion.nombre;
   panel.total.textContent = seccion.nroParcelas;
   panel.filas.textContent = `${filas} (${columnas} columnas)`;
   
-  // Organizar parcelas por fila
   const parcelasPorFila = {};
   parcelas.forEach(p => {
     if (!parcelasPorFila[p.nroFila]) {
@@ -652,26 +746,22 @@ function buildGrid(datos) {
     parcelasPorFila[p.nroFila].push(p);
   });
   
-  // Ordenar filas (de menor a mayor, pero se invertirá con flex-direction: column-reverse)
   const filasOrdenadas = Object.keys(parcelasPorFila).sort((a, b) => parseInt(a) - parseInt(b));
   
-  // Crear filas
   filasOrdenadas.forEach(nroFila => {
     const filaWrapper = document.createElement('div');
     filaWrapper.className = 'fila-wrapper';
     
-    // Label de fila
     const filaLabel = document.createElement('div');
     filaLabel.className = 'fila-label';
     filaLabel.textContent = `Fila ${nroFila}`;
     
-     if(tipoParcelaMap[seccion.tipoParcela] === 'nicho'){
-          filaWrapper.appendChild(filaLabel);
+    if(tipoParcelaMap[seccion.tipoParcela] === 'nicho'){
+      filaWrapper.appendChild(filaLabel);
     }
     const filaContainer = document.createElement('div');
     filaContainer.className = 'fila-container';
     
-    // Ordenar parcelas en la fila por nroParcela
     const parcelasEnFila = parcelasPorFila[nroFila].sort((a, b) => a.nroParcela - b.nroParcela);
     
     parcelasEnFila.forEach(parcela => {
@@ -679,24 +769,34 @@ function buildGrid(datos) {
       filaContainer.appendChild(cell);
     });
     
-   
-
     filaWrapper.appendChild(filaContainer);
     gridEl.appendChild(filaWrapper);
-    
   });
   
-  // Calcular dimensiones del grid y ajustar world-inner con margen de 500px
+  // CAMBIO: Resetear transform antes de calcular y usar requestAnimationFrame
   setTimeout(() => {
+    // Guardar transform actual
+    const currentScale = state.scale;
+    
+    // Resetear temporalmente el transform para obtener dimensiones reales
+    worldInner.style.transform = 'translate(0px, 0px) scale(1)';
+    
+    // Forzar reflow
+    worldInner.offsetHeight;
+    
     const gridRect = gridEl.getBoundingClientRect();
     const margin = 700;
     
-    // Expandir world-inner con margen
     const innerWidth = gridRect.width + margin * 2;
     const innerHeight = gridRect.height + margin * 2;
     
     worldInner.style.width = innerWidth + 'px';
     worldInner.style.height = innerHeight + 'px';
+    
+    // Restaurar el scale si no estamos volviendo de un panteón
+    if (!state.vistaPanteon) {
+      state.scale = currentScale;
+    }
     
     centrar();
     updateNumberSizes();
@@ -763,6 +863,9 @@ function createCell(parcela, seccion, difuntos) {
 function selectCell(el, parcela, difuntos) {
   if (state.activeCell) {
     state.activeCell.classList.remove('selected');
+        if (state.activeCell.dataset.tipo === 'panteon') {
+            ocultarBotonEntrar();
+        }
   }
   el.classList.add('selected');
   state.activeCell = el;
@@ -796,18 +899,27 @@ function selectCell(el, parcela, difuntos) {
   } else {
     panel.difuntosLista.innerHTML = '<div style="color:#888;font-size:12px;font-style:italic;">Sin difuntos registrados</div>';
   }
+
+    // Si es un panteón, mostrar botón de entrar
+    if (el.dataset.tipo === 'panteon') {
+        mostrarBotonEntrar(parcela);
+    }
+
+
 }
 
 function setBackgroundForType(tipo) {
-  bgLayer.style.backgroundImage = '';
-  
-  if (tipo === 'nicho') {
-    bgLayer.style.backgroundImage = 'url(imagenes/paredNicho.png)';
-  } else if (tipo === 'fosa') {
-    bgLayer.style.backgroundImage = 'url(imagenes/fondoFosa4.jpg)';
-  } else if (tipo === 'panteon') {
-    bgLayer.style.backgroundImage = 'url(imagenes/ladrillo.jpg)';
-  }
+    bgLayer.style.backgroundImage = '';
+    
+    if (tipo === 'nicho') {
+        bgLayer.style.backgroundImage = 'url(imagenes/paredNicho.png)';
+    } else if (tipo === 'fosa') {
+        bgLayer.style.backgroundImage = 'url(imagenes/fondoFosa4.jpg)';
+    } else if (tipo === 'panteon') {
+        bgLayer.style.backgroundImage = 'url(imagenes/ladrillo.jpg)';
+    } else if (tipo === 'feretro') {
+        bgLayer.style.backgroundImage = 'url(imagenes/fondoFeretro.jpg)'; // Ajusta según tu imagen
+    }
 }
 
 function applyTransform() {
@@ -940,6 +1052,226 @@ worldRoot.addEventListener('click', (e) => {
     state.activeCell = null;
   }
 });
+
+// ========== FUNCIONES PARA MANEJO DE PANTEONES ==========
+
+function mostrarBotonEntrar(parcela) {
+    // Ocultar botón anterior si existe
+    ocultarBotonEntrar();
+    
+    let boton = document.getElementById('botonEntrarPanteon');
+    if (!boton) {
+        boton = document.createElement('button');
+        boton.id = 'botonEntrarPanteon';
+        boton.innerHTML = '🚪 Entrar';
+        document.body.appendChild(boton);
+    }
+    
+    // Obtener la celda del panteón actualmente seleccionada
+    const cellPanteon = state.activeCell;
+    if (cellPanteon) {
+        // Posicionar el botón dentro de la celda del panteón
+        cellPanteon.style.position = 'relative';
+        cellPanteon.appendChild(boton);
+        boton.style.display = 'block';
+        boton.onclick = (e) => {
+            e.stopPropagation();
+            entrarPanteon(parcela);
+        };
+    }
+}
+
+function ocultarBotonEntrar() {
+    const boton = document.getElementById('botonEntrarPanteon');
+    if (boton) {
+        boton.style.display = 'none';
+        // Remover del DOM para reposicionarlo después
+        if (boton.parentNode) {
+            boton.parentNode.removeChild(boton);
+        }
+    }
+}
+
+function entrarPanteon(parcela) {
+    state.vistaPanteon = true;
+    state.panteonActual = parcela;
+    
+    ocultarBotonEntrar();
+    mostrarBotonVolver();
+    
+    // Construir vista de nichos del panteón
+    buildGridPanteonNichos(parcela);
+}
+
+function salirPanteon() {
+    state.vistaPanteon = false;
+    state.panteonActual = null;
+    
+    ocultarBotonVolver();
+    
+    // Resetear el zoom antes de volver
+    state.scale = 1;
+    state.translateX = 0;
+    state.translateY = 0;
+    
+    // Volver a construir la grilla original
+    buildGrid(Datos);
+}
+
+function mostrarBotonVolver() {
+    const boton = document.getElementById('botonVolverPanteon');
+    boton.style.display = 'block';
+    boton.onclick = salirPanteon;
+}
+
+function ocultarBotonVolver() {
+    const boton = document.getElementById('botonVolverPanteon');
+    if (boton) {
+        boton.style.display = 'none';
+    }
+}
+
+function buildGridPanteonNichos(panteonParcela) {
+    gridEl.innerHTML = '';
+    
+    const difuntosPanteon = Datos.difuntos.filter(d => d.parcelaId === panteonParcela.id && d.visibilidad);
+    
+    const tipoTiene = panteonParcela.tipoPanteonId;
+    let cantidadItems = 0;
+    let filas = 0;
+    let columnas = 0;
+    let tipoItem = '';
+    
+    if (tipoTiene === 1) {
+        cantidadItems = 12;
+        filas = 3;
+        columnas = 4;
+        tipoItem = 'nicho';
+        setBackgroundForType('nicho');
+    } else {
+        cantidadItems = 6;
+        filas = 2;
+        columnas = 3;
+        tipoItem = 'feretro';
+        setBackgroundForType('feretro');
+    }
+    
+    const titulo = document.createElement('div');
+    titulo.className = 'seccion-titulo';
+    titulo.textContent = `Panteón: ${panteonParcela.nombrePanteon || 'Panteón ' + panteonParcela.nroParcela}`;
+    gridEl.appendChild(titulo);
+    
+    panel.seccion.textContent = `Panteón ${panteonParcela.nombrePanteon || panteonParcela.nroParcela}`;
+    panel.fila.textContent = '—';
+    panel.total.textContent = cantidadItems;
+    panel.filas.textContent = `${filas} filas x ${columnas} columnas`;
+    
+    for (let fila = 1; fila <= filas; fila++) {
+        const filaContainer = document.createElement('div');
+        filaContainer.className = 'fila-container';
+        filaContainer.style.marginBottom = '0px';
+        
+        for (let col = 1; col <= columnas; col++) {
+            const nroItem = (fila - 1) * columnas + col;
+            const difunto = difuntosPanteon[nroItem - 1] || null;
+            
+            const cell = createItemPanteonCell(nroItem, difunto, panteonParcela.id, tipoItem);
+            filaContainer.appendChild(cell);
+        }
+        
+        gridEl.appendChild(filaContainer);
+    }
+    
+    // CAMBIO: Resetear transform antes de calcular
+    setTimeout(() => {
+        // Resetear temporalmente el transform para obtener dimensiones reales
+        worldInner.style.transform = 'translate(0px, 0px) scale(1)';
+        
+        // Forzar reflow
+        worldInner.offsetHeight;
+        
+        const gridRect = gridEl.getBoundingClientRect();
+        const margin = 700;
+        
+        const innerWidth = gridRect.width + margin * 2;
+        const innerHeight = gridRect.height + margin * 2;
+        
+        worldInner.style.width = innerWidth + 'px';
+        worldInner.style.height = innerHeight + 'px';
+        
+        centrar();
+        updateNumberSizes();
+    }, 100);
+}
+function createItemPanteonCell(nroItem, difunto, panteonId, tipoItem) {
+    const div = document.createElement('div');
+    const ocupado = difunto !== null;
+    
+    div.className = `cell ${tipoItem} ${ocupado ? 'ocupado' : 'disponible'}`;
+    
+    div.innerHTML = `<div class="numero">${nroItem}</div>`;
+    
+    // Agregar placa si está ocupado
+    if (ocupado) {
+        const placa = document.createElement('div');
+        placa.className = 'placa-memorial';
+        
+        const nombreCompleto = `${difunto.nombre} ${difunto.apellido}`;
+        const fechas = `${difunto.fechaNacimeinto || '?'} - ${difunto.fechaDefuncion || '?'}`;
+        
+        placa.innerHTML = `
+            <div class="placa-text placa-nombre">${nombreCompleto}</div>
+            <div class="placa-text placa-fecha">${fechas}</div>
+        `;
+        
+        div.appendChild(placa);
+    }
+    
+    div.dataset.nroItem = nroItem;
+    div.dataset.panteonId = panteonId;
+    div.dataset.ocupado = ocupado;
+    div.dataset.tipoItem = tipoItem;
+    
+    div.addEventListener('click', (e) => {
+        e.stopPropagation();
+        selectItemPanteon(div, nroItem, difunto, panteonId, tipoItem);
+    });
+    
+    return div;
+}
+
+function selectItemPanteon(el, nroItem, difunto, panteonId, tipoItem) {
+    if (state.activeCell) {
+        state.activeCell.classList.remove('selected');
+    }
+    el.classList.add('selected');
+    state.activeCell = el;
+    
+    // Actualizar panel
+    panel.numero.textContent = nroItem;
+    panel.fila.textContent = '—';
+    panel.tipo.textContent = tipoItem === 'nicho' ? 'Nicho de Panteón' : 'Féretro de Panteón';
+    panel.difuntos.textContent = difunto ? '1' : '0 (Disponible)';
+    
+    // Listar difunto
+    panel.difuntosLista.innerHTML = '';
+    
+    if (difunto) {
+        const difDiv = document.createElement('div');
+        difDiv.style.cssText = 'background:rgba(255,255,255,.3);padding:8px;border-radius:6px;margin-bottom:8px;font-size:13px;';
+        difDiv.innerHTML = `
+            <div class="nombreDifunto">${difunto.nombre} ${difunto.apellido}</div>
+            <div class="infoDifunto">🪪 ${difunto.dni}</div>
+            <div class="infoDifunto">⚧️ ${difunto.sexo}</div>
+            <div class="infoDifunto">❤️ ${difunto.fechaNacimeinto}</div>
+            <div class="infoDifunto">🪦 ${difunto.fechaDefuncion}</div>
+            <div class="infoDifunto">🩻 ${estadoDifunto[difunto.estadoDifuntoId] || difunto.estadoDifuntoId}</div>
+        `;
+        panel.difuntosLista.appendChild(difDiv);
+    } else {
+        panel.difuntosLista.innerHTML = '<div style="color:#888;font-size:12px;font-style:italic;">Sin difuntos registrados</div>';
+    }
+}
 
 // Inicializar
 buildGrid(Datos);
